@@ -1,6 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Text.Json;
+﻿using System.Text.Json;
 namespace BotC;
 
 public enum CharType
@@ -12,7 +10,7 @@ public enum CharType
 }
 
 public class Characters {
-    public readonly Dictionary<string, CharType> characterDict = new(StringComparer.OrdinalIgnoreCase) {
+    public readonly Dictionary<string, CharType> characterDict = new() {
         ["washerwoman"] = CharType.TOWNSFOLK,
         ["librarian"] = CharType.TOWNSFOLK,
         ["investigator"] = CharType.TOWNSFOLK,
@@ -96,8 +94,59 @@ public class Program {
         return scripts;
     }
 
-    static void AssignRoles(List<string> players, Script script) {
-        return;
+    static void PrintScriptRoles(Script script) {
+        Console.WriteLine("Townsfolk:");
+        foreach (string character in script.Townsfolk)
+            Console.WriteLine($"\t{character}");
+        Console.WriteLine("Outsiders:");
+        foreach (string character in script.Outsiders)
+            Console.WriteLine($"\t{character}");
+        Console.WriteLine("Minions:");
+        foreach (string character in script.Minions)
+            Console.WriteLine($"\t{character}");
+        Console.WriteLine("Demons:");
+        foreach (string character in script.Demons)
+            Console.WriteLine($"\t{character}");
+    }
+
+    static Dictionary<string, string> AssignRoles(List<string> players, Script script) {
+        var rng = new Random();
+        string PickRandom(List<string> list) => list[rng.Next(list.Count)];
+
+        string demon = PickRandom(script.Demons);
+        string minion = PickRandom(script.Minions);
+
+        int outsiderCount = minion.Equals("baron") ? 3 : 1;
+        List<string> selectedOutsiders = [.. script.Outsiders
+            .OrderBy(_ => rng.Next())
+            .Take(outsiderCount)
+        ];
+
+        int townsfolkCount = players.Count - (1 + 1 + outsiderCount);
+        List<string> selectedTownsfolk = [.. script.Townsfolk
+            .OrderBy(_ => rng.Next())
+            .Take(townsfolkCount)
+        ];
+
+        if (selectedOutsiders.Contains("drunk")) {
+            List<string> remainingTownsfolk = [.. script.Townsfolk
+                .Except(selectedTownsfolk)
+            ];
+            string fakeRole = PickRandom(remainingTownsfolk);
+            selectedOutsiders.Remove("drunk");
+            selectedOutsiders.Add($"drunk ({fakeRole})");
+        }
+
+        List<string> roles = [demon, minion];
+        roles.AddRange(selectedOutsiders);
+        roles.AddRange(selectedTownsfolk);
+
+        List<string> shuffledPlayers = [.. players.OrderBy(_ => rng.Next())];
+        List<string> shuffledRoles = [.. roles.OrderBy(_ => rng.Next())];
+        Dictionary<string, string> assignments = [];
+        for (int i = 0; i < players.Count; i++)
+            assignments[shuffledPlayers[i]] = shuffledRoles[i];
+        return assignments;
     }
 
     public static void Main(string[] args) {
@@ -132,18 +181,17 @@ public class Program {
             }
             playerNames.Add(player);
         }
-        Console.WriteLine("Players registered:");
-        foreach (string name in playerNames)
-            Console.WriteLine(name);
+        Console.WriteLine("Players registered.");
 
         Script script;
         while (true) {
-            Console.WriteLine("What script to play with?\n"
+            Console.WriteLine("\nWhat script to play with?\n"
                 + "(type \"scripts\" for a list of available scripts)");
             string? inputScript = Console.ReadLine();
             if (inputScript == "scripts") {
                 foreach (var s in scripts)
                     Console.WriteLine(s.Name);
+                Console.WriteLine();
                 continue;
             } else if (inputScript != null && scripts.Exists(x => x.Name == inputScript)) {
                 script = scripts.Find(s => s.Name == inputScript)!;
@@ -152,20 +200,24 @@ public class Program {
             Console.WriteLine("Error: Script not available.");
         }
         Console.WriteLine($"Selected to play: {script.Name} by {script.Author}.");
-        Console.WriteLine("Townsfolk:");
-        foreach (string character in script.Townsfolk)
-            Console.WriteLine($"\t{character}");
-        Console.WriteLine("Outsiders:");
-        foreach (string character in script.Outsiders)
-            Console.WriteLine($"\t{character}");
-        Console.WriteLine("Minions:");
-        foreach (string character in script.Minions)
-            Console.WriteLine($"\t{character}");
-        Console.WriteLine("Demons:");
-        foreach (string character in script.Demons)
-            Console.WriteLine($"\t{character}");
+        //PrintScriptRoles(script);
 
-        Console.WriteLine("Assigning character roles...");
-        AssignRoles(playerNames, script);
+        while (true) {
+            Console.WriteLine("\nAssigning character roles...");
+            var playerRoles = AssignRoles(playerNames, script);
+
+            Console.WriteLine("\n--- Role Assignments ---");
+            foreach (var assignment in playerRoles)
+                Console.WriteLine($"{assignment.Key}: {assignment.Value}");
+            reassign:
+            Console.Write("\nWould you like to reassign? (y/n) ");
+            string? input = Console.ReadLine();
+            if (input == "n")
+                break;
+            else if (input == "y")
+                continue;
+            else
+                goto reassign;
+        }
     }
 }
