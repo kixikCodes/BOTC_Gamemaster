@@ -1,6 +1,6 @@
 namespace BOTC;
 
-public class Characters {
+public class BotcRoles {
     public enum CharType
     {
         TOWNSFOLK,
@@ -41,12 +41,14 @@ public class Characters {
         "vortox", "yaggababble", "zombuul"
     ];
 
+    // Add Jinxes, Lorics and Travelers
+
     public static readonly Dictionary<string, CharType> Lookup;
 
-    static Characters()
+    static BotcRoles()
     {
         Lookup = [];
-        var c = new Characters();
+        var c = new BotcRoles();
 
         foreach (var name in c.Townsfolk)
             Lookup[name] = CharType.TOWNSFOLK;
