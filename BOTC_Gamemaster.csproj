@@ -7,6 +7,9 @@
 	<RootNamespace>BOTC</RootNamespace>
 	<CheckEolTargetFramework>false</CheckEolTargetFramework>
     <Nullable>enable</Nullable>
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <UseMSBuildDefaultNamespace>false</UseMSBuildDefaultNamespace>
   </PropertyGroup>
 
 </Project>
