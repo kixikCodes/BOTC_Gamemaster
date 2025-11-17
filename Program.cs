@@ -1,40 +1,5 @@
 ﻿using System.Text.Json;
-namespace BotC;
-
-public enum CharType
-{
-    TOWNSFOLK,
-    OUTSIDER,
-    MINION,
-    DEMON
-}
-
-public class Characters {
-    public readonly Dictionary<string, CharType> characterDict = new() {
-        ["washerwoman"] = CharType.TOWNSFOLK,
-        ["librarian"] = CharType.TOWNSFOLK,
-        ["investigator"] = CharType.TOWNSFOLK,
-        ["chef"] = CharType.TOWNSFOLK,
-        ["empath"] = CharType.TOWNSFOLK,
-        ["fortuneteller"] = CharType.TOWNSFOLK,
-        ["undertaker"] = CharType.TOWNSFOLK,
-        ["monk"] = CharType.TOWNSFOLK,
-        ["ravenkeeper"] = CharType.TOWNSFOLK,
-        ["virgin"] = CharType.TOWNSFOLK,
-        ["slayer"] = CharType.TOWNSFOLK,
-        ["soldier"] = CharType.TOWNSFOLK,
-        ["mayor"] = CharType.TOWNSFOLK,
-        ["butler"] = CharType.OUTSIDER,
-        ["drunk"] = CharType.OUTSIDER,
-        ["recluse"] = CharType.OUTSIDER,
-        ["saint"] = CharType.OUTSIDER,
-        ["poisoner"] = CharType.MINION,
-        ["spy"] = CharType.MINION,
-        ["scarletwoman"] = CharType.MINION,
-        ["baron"] = CharType.MINION,
-        ["imp"]  = CharType.DEMON
-    };
-}
+namespace BOTC;
 
 public class Script {
     public string Name { get; set; } = "";
@@ -47,11 +12,10 @@ public class Script {
 }
 
 public class Program {
-    static readonly Characters chars = new();
+    static readonly Random rng = new();
 
     static List<Script> ParseScripts(string scriptsPath) {
         List<Script> scripts = [];
-        var charsDict = chars.characterDict;
 
         foreach (string file in Directory.GetFiles(scriptsPath, "*.json")) {
             string json = File.ReadAllText(file);
@@ -63,33 +27,36 @@ public class Program {
             current.Name = meta.GetProperty("name").GetString() ?? "";
             current.Author = meta.GetProperty("author").GetString() ?? "";
 
+            bool failed = false;
             for (int i = 1; i < root.GetArrayLength(); i++) {
                 string? character = root[i].GetString();
                 if (character == null) {
                     Console.WriteLine($"Error: Failed to parse script: {file}");
-                    goto skip;
+                    failed = true;
+                    break;
                 }
-                if (!charsDict.TryGetValue(character, out var type)) {
+                if (!Characters.Lookup.TryGetValue(character, out var type)) {
                     Console.WriteLine($"Error: No such character \'{character}\': {file}");
                     continue;
                 }
                 switch (type) {
-                    case CharType.TOWNSFOLK:
+                    case Characters.CharType.TOWNSFOLK:
                         current.Townsfolk.Add(character);
                         break;
-                    case CharType.OUTSIDER:
+                    case Characters.CharType.OUTSIDER:
                         current.Outsiders.Add(character);
                         break;
-                    case CharType.MINION:
+                    case Characters.CharType.MINION:
                         current.Minions.Add(character);
                         break;
-                    case CharType.DEMON:
+                    case Characters.CharType.DEMON:
                         current.Demons.Add(character);
                         break;
                 }
             }
+            if (failed)
+                continue;
             scripts.Add(current);
-            skip:;
         }
         return scripts;
     }
@@ -110,8 +77,7 @@ public class Program {
     }
 
     static Dictionary<string, string> AssignRoles(List<string> players, Script script) {
-        var rng = new Random();
-        string PickRandom(List<string> list) => list[rng.Next(list.Count)];
+        static string PickRandom(List<string> list) => list[rng.Next(list.Count)];
 
         string demon = PickRandom(script.Demons);
         string minion = PickRandom(script.Minions);
@@ -149,7 +115,7 @@ public class Program {
         return assignments;
     }
 
-    public static void Main(string[] args) {
+    public static void Main() {
         string scriptsDir = "./Scripts";
         Console.WriteLine("=== Blood on the Clocktower ===");
         Console.WriteLine("Easy game setup system by kixikCodes.");
