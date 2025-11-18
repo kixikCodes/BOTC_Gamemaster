@@ -9,6 +9,10 @@ public class Script {
     public List<string> Outsiders { get; set; } = [];
     public List<string> Minions { get; set; } = [];
     public List<string> Demons { get; set; } = [];
+
+    public List<string> Travellers { get; set; } = [];
+    public string Fabled { get; set; } = "";
+    public string Loric { get; set; } = "";
 }
 
 public class ScriptManager {
@@ -33,6 +37,13 @@ public class ScriptManager {
                     failed = true;
                     break;
                 }
+                if (BotcRoles.Fabled.Contains(character)) {
+                    current.Fabled = character;
+                    continue;
+                } else if (BotcRoles.Loric.Contains(character)) {
+                    current.Loric = character;
+                    continue;
+                }
                 if (!BotcRoles.Lookup.TryGetValue(character, out var type)) {
                     Console.WriteLine($"Error: No such character \'{character}\': {file}");
                     continue;
@@ -49,6 +60,9 @@ public class ScriptManager {
                         break;
                     case BotcRoles.CharType.DEMON:
                         current.Demons.Add(character);
+                        break;
+                    case BotcRoles.CharType.TRAVELLER:
+                        current.Travellers.Add(character);
                         break;
                 }
             }
@@ -73,6 +87,15 @@ public class ScriptManager {
         Console.WriteLine("Demons:");
         foreach (string character in script.Demons)
             Console.WriteLine($"\t{character}");
+        if (script.Travellers.Count != 0) {
+            Console.WriteLine("Travellers:");
+            foreach (string character in script.Travellers)
+                Console.WriteLine($"\t{character}");
+        }
+        if (script.Fabled != "")
+            Console.WriteLine($"Fabled: {script.Fabled}");
+        if (script.Loric != "")
+            Console.WriteLine($"Loric: {script.Loric}");
     }
 
     public static Script SetScript(List<Script> scripts) {
