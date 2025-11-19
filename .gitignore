@@ -28,3 +28,9 @@ Thumbs.db
 
 # .sln file bcs idc
 *.sln
+
+# Test Scripts
+Scripts/*
+!Scripts/Trouble_Brewing.json
+!Scripts/Sects_and_Violets.json
+!Scripts/Bad_Moon_Rising.json

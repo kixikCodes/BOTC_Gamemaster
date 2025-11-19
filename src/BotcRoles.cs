@@ -7,93 +7,65 @@ public enum CharType
     OUTSIDER,
     MINION,
     DEMON,
-    TRAVELLER
+    TRAVELLER,
+    FABLED,
+    LORIC
 }
 
-// TODO: Make character class instead, base rest of code on that! Also, consistent naming.
-
-// public enum CharTeam
-// {
-//     GOOD,
-//     EVIL,
-//     NEUTRAL
-// }
-
-// public class Character {
-//     string name = "";
-//     CharType type;
-//     CharTeam team;
-//     string description = "";
-// }
-
-public class Jinx(string a, string b, string desc)
+public enum CharTeam
 {
-    public (string, string) Pair = (a, b);
+    GOOD,
+    EVIL,
+    NEUTRAL
+}
+
+public class Character {
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
+    public CharType Type { get; set; }
+    public CharTeam Team { get; set; }
+    public string Description { get; set; } = "";
+
+    public override string ToString() => ColorRole();
+
+    public string ColorRole() {
+        return Type switch {
+            CharType.TOWNSFOLK => Format.Color(Name, Format.Blue),
+            CharType.OUTSIDER => Format.Color(Name, Format.LightBlue),
+            CharType.MINION => Format.Color(Name, Format.Red),
+            CharType.DEMON => Format.Color(Name, Format.DarkRed),
+            CharType.TRAVELLER => Format.Color(Name, Format.Purple),
+            CharType.FABLED => Format.Color(Name, Format.Yellow),
+            CharType.LORIC => Format.Color(Name, Format.Green),
+            _ => Name
+        };
+    }
+}
+
+public class Jinx(Character a, Character b, string desc)
+{
+    public (Character, Character) Pair = (a, b);
     public string Description { get; set; } = desc;
 }
 
 public class BotcRoles {
 
-    // These use the naming convention of official script JSONs. Not really my choice nor the most effective.
+    public static readonly Dictionary<string, Character> Characters;
 
-    public static readonly List<string> Townsfolk = [
-        "acrobat", "alchemist", "alsaahir", "amnesiac", "artist", "atheist", "balloonist", "banshee",
-        "bountyhunter", "cannibal", "chambermaid", "chef", "choirboy", "clockmaker", "courtier",
-        "cultleader", "dreamer", "empath", "engineer", "exorcist", "farmer", "fisherman", "flowergirl",
-        "fool", "fortuneteller", "gambler", "general", "gossip", "grandmother", "highpriestess",
-        "huntsman", "innkeeper", "investigator", "juggler", "king", "knight", "librarian", "lycanthrope",
-        "magician", "mathematician", "mayor", "minstrel", "monk", "nightwatchman", "noble", "oracle",
-        "pacifist", "philosopher", "pixie", "poppygrower", "preacher", "princess", "professor",
-        "ravenkeeper", "sage", "sailor", "savant", "seamstress", "shugenja", "slayer", "snakecharmer",
-        "soldier", "steward", "tealady", "towncrier", "undertaker", "villageidiot", "virgin",
-        "washerwoman"
-    ];
-
-    public static readonly List<string> Outsiders = [
-        "barber", "butler", "damsel", "drunk", "golem", "goon", "hatter", "heretic", "hermit", "klutz",
-        "lunatic", "moonchild", "mutant", "ogre", "plaguedoctor", "politician", "puzzlemaster",
-        "recluse", "saint", "snitch", "sweetheart", "tinker", "zealot"
-    ];
-
-    public static readonly List<string> Minions = [
-        "assassin", "baron", "boffin", "boomdandy", "cerenovus", "devilsadvocate", "eviltwin",
-        "fearmonger", "goblin", "godfather", "harpy", "marionette", "mastermind", "mezepheles",
-        "organgrinder", "pithag", "poisoner", "psychopath", "scarletwoman", "spy", "summoner",
-        "vizier", "widow", "witch", "wizard", "wraith", "xaan"
-    ];
-
-    public static readonly List<string> Demons = [
-        "alhadikhia", "fanggu", "imp", "kazali", "legion", "leviathan", "lilmonsta", "lleech",
-        "lordoftyphon", "nodashii", "ojo", "po", "pukka", "riot", "shabaloth", "vigormortis",
-        "vortox", "yaggababble", "zombuul"
-    ];
-
-    public static readonly List<string> Travellers = [
-        "scapegoat", "gunslinger", "beggar", "bureaucrat", "thief", "butcher", "bonecollector",
-        "harlot", "barista", "deviant", "apprentice", "matron", "voudon", "judge", "bishop",
-        "cacklejack", "gangster", "gnome"
-    ];
-
-    public static readonly List<string> Fabled = [
-        "angle", "buddhist", "doomslayer", "hellslibrarian", "fiddler", "revolutionary", "toymaker",
-        "djinn", "duchess", "fibbin", "sentinel", "spiritofivory", "deusexfiasco", "ferryman"
-    ];
-
-    public static readonly List<string> Loric = [
-        "bootlegger", "bigwig", "gardener", "stormcatcher", "tor"
-    ];
-
-    public static readonly Dictionary<string, CharType> Lookup;
-
-    private record JinxJson(string a, string b, string desc);
+    private record JinxJson(string A, string B, string Desc);
 
     public static List<Jinx> LoadJinxes(string path)
     {
         var json = File.ReadAllText(path);
         var items = JsonSerializer.Deserialize<List<JinxJson>>(json);
         var result = new List<Jinx>();
-        foreach (var item in items!)
-            result.Add(new Jinx(item.a, item.b, item.desc));
+        foreach (var item in items!) {
+            result.Add(new Jinx(
+                Characters[item.A],
+                Characters[item.B]!,
+                item.Desc)
+            );
+        }
         return result;
     }
 
@@ -101,21 +73,39 @@ public class BotcRoles {
 
     static BotcRoles()
     {
-        Lookup = [];
+        Characters = [];
         Jinxes = [];
-        _ = new BotcRoles();
-
-        foreach (var name in Townsfolk)
-            Lookup[name] = CharType.TOWNSFOLK;
-        foreach (var name in Outsiders)
-            Lookup[name] = CharType.OUTSIDER;
-        foreach (var name in Minions)
-            Lookup[name] = CharType.MINION;
-        foreach (var name in Demons)
-            Lookup[name] = CharType.DEMON;
-        foreach (var name in Travellers)
-            Lookup[name] = CharType.TRAVELLER;
-        
+        var json = File.ReadAllText("./Resources/characters.json");
+        using var doc = JsonDocument.Parse(json);
+        foreach (var section in doc.RootElement.EnumerateObject()) {
+            CharType type = section.Name switch {
+                "townsfolk" => CharType.TOWNSFOLK,
+                "outsiders" => CharType.OUTSIDER,
+                "minions" => CharType.MINION,
+                "demons" => CharType.DEMON,
+                "travellers" => CharType.TRAVELLER,
+                "fabled" => CharType.FABLED,
+                "loric" => CharType.LORIC,
+                _ => throw new Exception("Unknown type: " + section.Name)
+            };
+            CharTeam team = type switch {
+                CharType.TOWNSFOLK or CharType.OUTSIDER => CharTeam.GOOD,
+                CharType.MINION or CharType.DEMON => CharTeam.EVIL,
+                _ => CharTeam.NEUTRAL
+            };
+            foreach (var entry in section.Value.EnumerateArray()) {
+                var id = entry.GetProperty("id").GetString() ?? "";
+                var name = entry.GetProperty("name").GetString() ?? "";
+                var desc = entry.GetProperty("desc").GetString() ?? "";
+                Characters[id] = new Character {
+                    Id = id,
+                    Name = name,
+                    Type = type,
+                    Team = team,
+                    Description = desc
+                };
+            }
+        }
         Jinxes = LoadJinxes("./Resources/jinxes.json");
     }
 }

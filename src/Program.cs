@@ -1,6 +1,6 @@
 ﻿namespace BOTC;
 
-public static class C {
+public static class Format {
     public const string Reset = "\e[0m";
     public const string Bold = "\e[1m";
 
@@ -17,63 +17,43 @@ public static class C {
 
     public static string BoldText(string text)
         => $"{Bold}{text}{Reset}";
-
-    // FIXME: Once the Character class exists, it may be wiser to just put this there based on its Type.
-    public static string ColorRole(string role) {
-        string baseRole = role.Contains('(') ? role[..role.IndexOf(' ')] : role;
-
-        if (BotcRoles.Townsfolk.Contains(baseRole, StringComparer.OrdinalIgnoreCase))
-            return Color(role, Blue);
-        if (BotcRoles.Outsiders.Contains(baseRole, StringComparer.OrdinalIgnoreCase))
-            return Color(role, LightBlue);
-        if (BotcRoles.Minions.Contains(baseRole, StringComparer.OrdinalIgnoreCase))
-            return Color(role, Red);
-        if (BotcRoles.Demons.Contains(baseRole, StringComparer.OrdinalIgnoreCase))
-            return Color(role, DarkRed);
-        if (BotcRoles.Travellers.Contains(baseRole, StringComparer.OrdinalIgnoreCase))
-            return Color(role, Purple);
-        if (BotcRoles.Fabled.Contains(baseRole, StringComparer.OrdinalIgnoreCase))
-            return Color(role, Yellow);
-        if (BotcRoles.Loric.Contains(baseRole, StringComparer.OrdinalIgnoreCase))
-            return Color(role, Green);
-        return role;
-    }
 }
 
 public class Program {
     static readonly string scriptsDir = "./Scripts";
 
     private static void PrintGameInfo(Game prepedGame) {
-        Console.WriteLine("\n" + C.BoldText("\t--- Role Assignments ---"));
+        Console.WriteLine("\n" + Format.BoldText("\t--- Role Assignments ---"));
         var assignments = prepedGame.Assignments;
         foreach (var role in assignments) {
-            string colored = C.ColorRole(role.Value);
-            Console.WriteLine($"{role.Key}: {colored}");
+            if (role.Value.Id == "drunk")
+                Console.WriteLine($"{role.Key}: {role.Value} ({prepedGame.DrunkFake})");
+            else
+                Console.WriteLine($"{role.Key}: {role.Value}");
         }
         if (prepedGame.Travellers.Count != 0) {
             Console.WriteLine("\nAvailable Travellers:");
-            foreach (string traveller in prepedGame.Travellers)
-                Console.WriteLine(C.ColorRole(traveller));
+            foreach (Character traveller in prepedGame.Travellers)
+                Console.WriteLine(traveller);
         }
-        if (prepedGame.Fabled != "") {
-            Console.WriteLine("\nFabled: " + C.ColorRole(prepedGame.Fabled));
+        if (prepedGame.Fabled != null) {
+            Console.WriteLine($"\nFabled: {prepedGame.Fabled}");
             if (prepedGame.ActiveJinxes.Count != 0) {
                 Console.WriteLine("\tActive Jinxes:");
                 foreach (var jinx in prepedGame.ActiveJinxes)
-                    Console.WriteLine("\t" + C.ColorRole(jinx.Pair.Item1)
-                        + " & " + C.ColorRole(jinx.Pair.Item2));
+                    Console.WriteLine($"\t{jinx.Pair.Item1} & {jinx.Pair.Item2}");
             }
         }
-        if (prepedGame.Loric != "")
-            Console.WriteLine("\nLoric: " + C.ColorRole(prepedGame.Loric));
+        if (prepedGame.Loric != null)
+            Console.WriteLine($"\nLoric: {prepedGame.Loric}");
         Console.WriteLine("\nThe possible minion/demon bluffs are:");
-        foreach (string bluff in prepedGame.Bluffs)
-            Console.WriteLine(C.ColorRole(bluff));
+        foreach (Character bluff in prepedGame.Bluffs)
+            Console.WriteLine(bluff);
     }
 
     public static void Main() {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
-        Console.WriteLine(C.BoldText("=== Blood on the Clocktower ==="));
+        Console.WriteLine(Format.BoldText("=== Blood on the Clocktower ==="));
         Console.WriteLine("Easy game setup system by kixikCodes.");
 
         // Parse all scripts

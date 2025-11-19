@@ -1,12 +1,14 @@
 namespace BOTC;
 
 public class Game {
-    public Dictionary<string, string> Assignments { get; set; } = [];
-    public List<string> Travellers { get; set; } = [];
-    public string Fabled { get; set; } = "";
-    public string Loric { get; set; } = "";
+    public Dictionary<string, Character> Assignments { get; set; } = [];
+    public List<Character> Travellers { get; set; } = [];
+    public Character? Fabled;
+    public Character? Loric;
     public List<Jinx> ActiveJinxes { get; set; } = [];
-    public List<string> Bluffs { get; set; } = [];
+    public List<Character> Bluffs { get; set; } = [];
+    public Character? DrunkFake;
+    public Character? LunaticFake;
 }
 
 public class GameManager {
@@ -24,7 +26,12 @@ public class GameManager {
         {12, (6, 3, 2, 1) }
     };
 
-    private record RoleResult(List<string> Roles, List<string> Bluffs);
+    private record Roles(
+        List<Character> PlayerRoles,
+        List<Character> Bluffs,
+        Character? DrunkFake,
+        Character? LunaticFake
+    );
 
     public static int SetPlayerCount() {
         int playerCount;
@@ -59,63 +66,68 @@ public class GameManager {
         return playerNames;
     }
 
-    private static RoleResult PickRoles(Script script, List<string> players) {
+    private static Roles PickRoles(Script script, List<string> players) {
         var (townsfolkCount, outsiderCount, minionCount, demonCount) 
             = RoleCountTable[players.Count];
-        static string PickRandom(List<string> list) => list[rng.Next(list.Count)];
+        static Character PickRandom(List<Character> list) => list[rng.Next(list.Count)];
 
-        string demon = PickRandom(script.Demons);
+        Character demon = PickRandom(script.Demons);
         
-        List<string> selectedMinions = [.. script.Minions
+        List<Character> selectedMinions = [.. script.Minions
             .OrderBy(_ => rng.Next())
             .Take(minionCount)
         ];
-        if (selectedMinions.Contains("baron")) {
+        if (selectedMinions.Exists(c => c.Id == "baron")) {
             outsiderCount++;
             townsfolkCount--;
         }
 
-        List<string> selectedOutsiders = [.. script.Outsiders
+        List<Character> selectedOutsiders = [.. script.Outsiders
             .OrderBy(_ => rng.Next())
             .Take(outsiderCount)
         ];
 
-        List<string> selectedTownsfolk = [.. script.Townsfolk
+        List<Character> selectedTownsfolk = [.. script.Townsfolk
             .OrderBy(_ => rng.Next())
             .Take(townsfolkCount)
         ];
 
-        string? drunkFake = null;
-        if (selectedOutsiders.Contains("drunk")) {
-            List<string> remainingTownsfolk = [.. script.Townsfolk
+        Character? drunkFake = null;
+        if (selectedOutsiders.Exists(c => c.Id == "drunk")) {
+            List<Character> remainingTownsfolk = [.. script.Townsfolk
                 .Except(selectedTownsfolk)
             ];
             drunkFake = PickRandom(remainingTownsfolk);
-            selectedOutsiders.Remove("drunk");
-            selectedOutsiders.Add($"drunk ({drunkFake})");
         }
 
-        List<string> roles = [demon];
+        Character? lunaticFake = null;
+
+        List<Character> roles = [demon];
         roles.AddRange(selectedMinions);
         roles.AddRange(selectedOutsiders);
         roles.AddRange(selectedTownsfolk);
 
-        List<string> allGoodSelected = [.. selectedTownsfolk, .. selectedOutsiders];
+        List<Character> allGoodSelected = [.. selectedTownsfolk, .. selectedOutsiders];
         var allPossible = script.Townsfolk.Concat(script.Outsiders).ToHashSet();
-        foreach (string role in allGoodSelected)
+        foreach (Character role in allGoodSelected)
             allPossible.Remove(role);
-        allPossible.Remove("drunk");
+        allPossible.RemoveWhere(c => c.Id == "drunk");
         if (drunkFake != null)
             allPossible.Remove(drunkFake);
 
-        return new RoleResult(Roles: roles, Bluffs: [.. allPossible]);
+        return new Roles(
+            PlayerRoles: roles,
+            Bluffs: [.. allPossible],
+            DrunkFake: drunkFake,
+            LunaticFake: lunaticFake
+        );
     }
 
-    private static Dictionary<string, string> AssignRoles(List<string> players, List<string> roles)
+    private static Dictionary<string, Character> AssignRoles(List<string> players, List<Character> roles)
     {
-        Dictionary<string, string> assignments = [];
+        Dictionary<string, Character> assignments = [];
         List<string> shuffledPlayers = [.. players.OrderBy(_ => rng.Next())];
-        List<string> shuffledRoles = [.. roles.OrderBy(_ => rng.Next())];
+        List<Character> shuffledRoles = [.. roles.OrderBy(_ => rng.Next())];
         for (int i = 0; i < players.Count; i++)
             assignments[shuffledPlayers[i]] = shuffledRoles[i];
 
@@ -130,10 +142,11 @@ public class GameManager {
         };
         
         var selected = PickRoles(script, players);
-        game.Assignments = AssignRoles(players, selected.Roles);
+        game.Assignments = AssignRoles(players, selected.PlayerRoles);
+        game.DrunkFake = selected.DrunkFake;
         game.ActiveJinxes = [];
-        if (string.Equals(script.Fabled, "djinn", StringComparison.OrdinalIgnoreCase)) {
-            var assigned = new HashSet<string>(selected.Roles, StringComparer.OrdinalIgnoreCase);
+        if (script.Fabled != null && string.Equals(script.Fabled.Id, "djinn")) {
+            var assigned = new HashSet<Character>(selected.PlayerRoles);
             foreach (var jinx in BotcRoles.Jinxes)
                 if (assigned.Contains(jinx.Pair.Item1) && assigned.Contains(jinx.Pair.Item2))
                     game.ActiveJinxes.Add(jinx);
