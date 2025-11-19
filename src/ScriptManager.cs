@@ -13,9 +13,30 @@ public class Script {
     public List<string> Travellers { get; set; } = [];
     public string Fabled { get; set; } = "";
     public string Loric { get; set; } = "";
+    public List<Jinx> Jinxes { get; set; } = [];
 }
 
 public class ScriptManager {
+
+    public static List<Jinx> ComputeJinxes(Script script)
+    {
+        if (!string.Equals(script.Fabled, "djinn", StringComparison.OrdinalIgnoreCase))
+            return [];
+        var allChars = new List<string>();
+        allChars.AddRange(script.Townsfolk);
+        allChars.AddRange(script.Outsiders);
+        allChars.AddRange(script.Minions);
+        allChars.AddRange(script.Demons);
+        allChars.AddRange(script.Travellers);
+
+        var foundJinxes = new List<Jinx>();
+        var charSet = new HashSet<string>(allChars, StringComparer.OrdinalIgnoreCase);
+        foreach (var jinx in BotcRoles.Jinxes)
+            if (charSet.Contains(jinx.Pair.Item1) && charSet.Contains(jinx.Pair.Item2))
+                foundJinxes.Add(jinx);
+        return foundJinxes;
+    }
+
     public static List<Script> ParseScripts(string scriptsPath) {
         List<Script> scripts = [];
 
@@ -49,25 +70,26 @@ public class ScriptManager {
                     continue;
                 }
                 switch (type) {
-                    case BotcRoles.CharType.TOWNSFOLK:
+                    case CharType.TOWNSFOLK:
                         current.Townsfolk.Add(character);
                         break;
-                    case BotcRoles.CharType.OUTSIDER:
+                    case CharType.OUTSIDER:
                         current.Outsiders.Add(character);
                         break;
-                    case BotcRoles.CharType.MINION:
+                    case CharType.MINION:
                         current.Minions.Add(character);
                         break;
-                    case BotcRoles.CharType.DEMON:
+                    case CharType.DEMON:
                         current.Demons.Add(character);
                         break;
-                    case BotcRoles.CharType.TRAVELLER:
+                    case CharType.TRAVELLER:
                         current.Travellers.Add(character);
                         break;
                 }
             }
             if (failed)
                 continue;
+            current.Jinxes = ComputeJinxes(current);
             scripts.Add(current);
         }
         return scripts;
@@ -77,25 +99,32 @@ public class ScriptManager {
         Console.WriteLine($"--- {script.Name} by {script.Author} ---");
         Console.WriteLine("Townsfolk:");
         foreach (string character in script.Townsfolk)
-            Console.WriteLine($"\t{character}");
+            Console.WriteLine("\t" + C.ColorRole(character));
         Console.WriteLine("Outsiders:");
         foreach (string character in script.Outsiders)
-            Console.WriteLine($"\t{character}");
+            Console.WriteLine("\t" + C.ColorRole(character));
         Console.WriteLine("Minions:");
         foreach (string character in script.Minions)
-            Console.WriteLine($"\t{character}");
+            Console.WriteLine("\t" + C.ColorRole(character));
         Console.WriteLine("Demons:");
         foreach (string character in script.Demons)
-            Console.WriteLine($"\t{character}");
+            Console.WriteLine("\t" + C.ColorRole(character));
         if (script.Travellers.Count != 0) {
-            Console.WriteLine("Travellers:");
+            Console.WriteLine("Possible Travellers:");
             foreach (string character in script.Travellers)
-                Console.WriteLine($"\t{character}");
+                Console.WriteLine("\t" + C.ColorRole(character));
         }
-        if (script.Fabled != "")
-            Console.WriteLine($"Fabled: {script.Fabled}");
+        if (script.Fabled != "") {
+            Console.WriteLine("Fabled:\n\t" + C.ColorRole(script.Fabled));
+            if (script.Jinxes.Count != 0) {
+                Console.WriteLine("\tJinxes:");
+                foreach (var jinx in script.Jinxes)
+                    Console.WriteLine($"\t" + C.ColorRole(jinx.Pair.Item1)
+                        + " & " + C.ColorRole(jinx.Pair.Item2));
+            }
+        }
         if (script.Loric != "")
-            Console.WriteLine($"Loric: {script.Loric}");
+            Console.WriteLine("Loric:\n\t" + C.ColorRole(script.Loric));
     }
 
     public static Script SetScript(List<Script> scripts) {

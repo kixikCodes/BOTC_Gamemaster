@@ -1,14 +1,40 @@
+using System.Text.Json;
 namespace BOTC;
 
+public enum CharType
+{
+    TOWNSFOLK,
+    OUTSIDER,
+    MINION,
+    DEMON,
+    TRAVELLER
+}
+
+// TODO: Make character class instead, base rest of code on that! Also, consistent naming.
+
+// public enum CharTeam
+// {
+//     GOOD,
+//     EVIL,
+//     NEUTRAL
+// }
+
+// public class Character {
+//     string name = "";
+//     CharType type;
+//     CharTeam team;
+//     string description = "";
+// }
+
+public class Jinx(string a, string b, string desc)
+{
+    public (string, string) Pair = (a, b);
+    public string Description { get; set; } = desc;
+}
+
 public class BotcRoles {
-    public enum CharType
-    {
-        TOWNSFOLK,
-        OUTSIDER,
-        MINION,
-        DEMON,
-        TRAVELLER
-    }
+
+    // These use the naming convention of official script JSONs. Not really my choice nor the most effective.
 
     public static readonly List<string> Townsfolk = [
         "acrobat", "alchemist", "alsaahir", "amnesiac", "artist", "atheist", "balloonist", "banshee",
@@ -59,11 +85,24 @@ public class BotcRoles {
 
     public static readonly Dictionary<string, CharType> Lookup;
 
-    //TODO: Create Djinn's jinx combination dictionary.
+    private record JinxJson(string a, string b, string desc);
+
+    public static List<Jinx> LoadJinxes(string path)
+    {
+        var json = File.ReadAllText(path);
+        var items = JsonSerializer.Deserialize<List<JinxJson>>(json);
+        var result = new List<Jinx>();
+        foreach (var item in items!)
+            result.Add(new Jinx(item.a, item.b, item.desc));
+        return result;
+    }
+
+    public static readonly List<Jinx> Jinxes;
 
     static BotcRoles()
     {
         Lookup = [];
+        Jinxes = [];
         _ = new BotcRoles();
 
         foreach (var name in Townsfolk)
@@ -76,5 +115,7 @@ public class BotcRoles {
             Lookup[name] = CharType.DEMON;
         foreach (var name in Travellers)
             Lookup[name] = CharType.TRAVELLER;
+        
+        Jinxes = LoadJinxes("./Resources/jinxes.json");
     }
 }

@@ -5,6 +5,7 @@ public class Game {
     public List<string> Travellers { get; set; } = [];
     public string Fabled { get; set; } = "";
     public string Loric { get; set; } = "";
+    public List<Jinx> ActiveJinxes { get; set; } = [];
     public List<string> Bluffs { get; set; } = [];
 }
 
@@ -130,9 +131,14 @@ public class GameManager {
         
         var selected = PickRoles(script, players);
         game.Assignments = AssignRoles(players, selected.Roles);
+        game.ActiveJinxes = [];
+        if (string.Equals(script.Fabled, "djinn", StringComparison.OrdinalIgnoreCase)) {
+            var assigned = new HashSet<string>(selected.Roles, StringComparer.OrdinalIgnoreCase);
+            foreach (var jinx in BotcRoles.Jinxes)
+                if (assigned.Contains(jinx.Pair.Item1) && assigned.Contains(jinx.Pair.Item2))
+                    game.ActiveJinxes.Add(jinx);
+        }
         game.Bluffs = selected.Bluffs;
-
-        //TODO: Compute Jinxes if Djinn is present.
 
         return game;
     }
