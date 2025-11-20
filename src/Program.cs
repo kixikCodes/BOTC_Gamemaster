@@ -28,6 +28,8 @@ public class Program {
         foreach (var role in assignments) {
             if (role.Value.Id == "drunk")
                 Console.WriteLine($"{role.Key}: {role.Value} ({prepedGame.DrunkFake})");
+            else if (role.Value.Id == "amnesiac")
+                Console.WriteLine($"{role.Key}: {role.Value} ({prepedGame.AmnesiacRole})");
             else if (role.Value.Id == "grandmother")
                 Console.WriteLine($"{role.Key}: {role.Value} ({prepedGame.GrandmotherTarget})");
             else if (role.Value.Id == "lunatic")
@@ -39,72 +41,41 @@ public class Program {
             else
                 Console.WriteLine($"{role.Key}: {role.Value}");
         }
-        if (prepedGame.Fabled != null) {
-            Console.WriteLine($"\nFabled: {prepedGame.Fabled}");
-            if (prepedGame.ActiveJinxes.Count != 0) {
-                Console.WriteLine("\tActive Jinxes:");
-                foreach (var jinx in prepedGame.ActiveJinxes)
-                    Console.WriteLine($"\t{jinx.Pair.Item1} & {jinx.Pair.Item2}");
-            }
+        if (prepedGame.ActiveJinxes.Count != 0) {
+            Console.WriteLine("\nJinxes:");
+            foreach (var jinx in prepedGame.ActiveJinxes)
+                Console.WriteLine($"\t{jinx.Pair.Item1} & {jinx.Pair.Item2}");
         }
-        if (prepedGame.Loric != null)
-            Console.WriteLine($"\nLoric: {prepedGame.Loric}");
         Console.WriteLine("\nThe possible minion/demon bluffs are:");
         foreach (Character bluff in prepedGame.Bluffs)
-            Console.WriteLine(bluff);
-    }
-
-    private static List<Character> SetTravellers(Game prepedGame, Script script) {
-        if (script.Travellers.Count == 0) {
-            Console.WriteLine("This script has no available Travellers.");
-            return [];
-        }
-        List<Character> chosen = [];
-        while (true) {
-            Console.WriteLine("\nAvailable Travellers:");
-            for (int i = 0; i < script.Travellers.Count; i++)
-                Console.WriteLine($"\t{i + 1}: {script.Travellers[i]}");
-            Console.Write("Enter number to add traveller (or press Enter to finish): ");
-            string? sel = Console.ReadLine();
-            if (string.IsNullOrWhiteSpace(sel))
-                break;
-            if (!int.TryParse(sel, out int idx) || idx < 1 || idx > script.Travellers.Count) {
-                Console.WriteLine("Invalid selection.");
-                continue;
-            }
-            chosen.Add(script.Travellers[idx - 1]);
-            Console.WriteLine("Traveller added.");
-            if (prepedGame.Travellers.Count == 0)
-                break;
-        }
-        return chosen;
+            Console.WriteLine($"\t{bluff}");
     }
 
     private static void PrintSetupGame(Game setGame, Script script) {
-        Console.WriteLine(Format.BoldText($"=== Game Setup: {script.Name} ==="));
+        Console.WriteLine(Format.BoldText($"\n=== Game Setup: {script.Name} ==="));
         Console.WriteLine("\n" + Format.BoldText("\t--- Characters & Order ---\n"));
         var assignments = setGame.Assignments;
         foreach (var role in assignments) {
             if (role.Value.Id == "drunk")
-                Console.WriteLine($"{role.Key}: {role.Value} ({setGame.DrunkFake})");
+                Console.Write($"{role.Key}: {role.Value} ({setGame.DrunkFake})");
             else if (role.Value.Id == "grandmother")
-                Console.WriteLine($"{role.Key}: {role.Value} ({setGame.GrandmotherTarget})");
+                Console.Write($"{role.Key}: {role.Value} ({setGame.GrandmotherTarget})");
+            else if (role.Value.Id == "amnesiac")
+                Console.Write($"{role.Key}: {role.Value} ({setGame.AmnesiacRole})");
             else if (role.Value.Id == "lunatic")
-                Console.WriteLine($"{role.Key}: {role.Value} ({setGame.LunaticFake})");
+                Console.Write($"{role.Key}: {role.Value} ({setGame.LunaticFake})");
             else if (role.Value.Id == "marionette")
-                Console.WriteLine($"{role.Key}: {role.Value} ({setGame.MarionetteFake})");
+                Console.Write($"{role.Key}: {role.Value} ({setGame.MarionetteFake})");
             else if (role.Value.Id == "eviltwin")
-                Console.WriteLine($"{role.Key}: {role.Value} ({setGame.EvilTwinTarget})");
+                Console.Write($"{role.Key}: {role.Value} ({setGame.EvilTwinTarget})");
             else
-                Console.WriteLine($"{role.Key}: {role.Value}");
-            Console.WriteLine($"\t{role.Value.Description}");
+                Console.Write($"{role.Key}: {role.Value}");
+            Console.WriteLine($" - {role.Value.Description}");
         }
         if (setGame.Travellers.Count != 0) {
-            Console.WriteLine("\nSet Traveller:");
-            foreach (var traveller in setGame.Travellers) {
-                Console.WriteLine($"\t{traveller}");
-                Console.WriteLine($"\t{traveller.Description}");
-            }
+            Console.WriteLine("\nTravellers:");
+            foreach (var traveller in setGame.Travellers)
+                Console.WriteLine($"{traveller} - {traveller.Description}");
             Console.WriteLine("Note - Traveller order and players must be assigned manually.");
         }
         Console.WriteLine("\n" + Format.BoldText("\t--- Storyteller & Special Rules ---"));
@@ -113,29 +84,28 @@ public class Program {
         if (setGame.Fabled != null) {
             Console.WriteLine($"\nFabled: {setGame.Fabled} - {setGame.Fabled.Description}");
             if (setGame.Fabled.Id == "djinn" && setGame.ActiveJinxes.Count != 0) {
-                Console.WriteLine("\tActive Jinxes:");
+                Console.WriteLine("Active Jinxes:");
                 foreach (var jinx in setGame.ActiveJinxes) {
-                    Console.WriteLine($"\t{jinx.Pair.Item1} & {jinx.Pair.Item2}");
-                    Console.WriteLine($"\t{jinx.Description}");
+                    Console.Write($"{jinx.Pair.Item1} & {jinx.Pair.Item2}");
+                    Console.WriteLine($" - {jinx.Description}");
                 }
             }
         }
         if (setGame.Loric != null) {
             Console.WriteLine($"\nLoric: {setGame.Loric} - {setGame.Loric.Description}");
             if (setGame.Loric.Id == "bootlegger")
-                Console.WriteLine($"\t{setGame.BootleggerRule}");
+                Console.WriteLine($"Bootlegger Rule: {setGame.BootleggerRule}");
         }
         Console.WriteLine("\n" + Format.BoldText("\t--- Possible Evil Team Bluffs ---\n"));
         foreach (Character bluff in setGame.Bluffs)
-            Console.WriteLine(bluff);
+            Console.WriteLine($"{bluff} - {bluff.Description}");
         Console.WriteLine("\nGame created using BotC_Gamemaster.");
     }
 
     public static void Main() {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
-        Console.WriteLine(Format.BoldText("=== Blood on the Clocktower ==="));
+        Console.WriteLine(Format.BoldText("====== Blood on the Clocktower ======"));
         Console.WriteLine("Easy game setup system by kixikCodes.");
-
         // Parse all scripts
         List<Script> scripts = ScriptManager.ParseScripts(scriptsDir);
         // Set player count and names
@@ -162,7 +132,7 @@ public class Program {
         Console.Write("\nWould you like to add travellers? (y/n)");
         string? travellersInput = Console.ReadLine();
         if (travellersInput == "y")
-            prepedGame.Travellers = SetTravellers(prepedGame, script);
+            prepedGame.Travellers = GameManager.SetTravellers(prepedGame, script);
         // If there is a Bootlegger, ask for homebrew rule
         if (prepedGame.Loric != null && prepedGame.Loric.Id == "bootlegger") {
             Console.WriteLine("\nA Bootlegger is present.");

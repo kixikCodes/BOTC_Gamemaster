@@ -31,7 +31,7 @@ public class ScriptManager {
 
         var foundJinxes = new List<Jinx>();
         var charSet = new HashSet<Character>(allChars);
-        foreach (var jinx in BotcRoles.Jinxes)
+        foreach (var jinx in BotcTokens.Jinxes)
             if (charSet.Contains(jinx.Pair.Item1) && charSet.Contains(jinx.Pair.Item2))
                 foundJinxes.Add(jinx);
         return foundJinxes;
@@ -58,7 +58,7 @@ public class ScriptManager {
                     failed = true;
                     break;
                 }
-                if (!BotcRoles.Characters.TryGetValue(id, out var character)) {
+                if (!BotcTokens.Characters.TryGetValue(id, out var character)) {
                     Console.WriteLine($"Error: No such character \'{id}\': {file}");
                     continue;
                 }
@@ -128,33 +128,33 @@ public class ScriptManager {
     public static Script SetScript(List<Script> scripts) {
         Script selected;
         while (true) {
-            Console.WriteLine("\nWhat script to play with?\n"
-                + "(type \"scripts\" for a list of available scripts)");
-            string? inputScript = Console.ReadLine();
-            if (inputScript == "scripts") {
-                foreach (var s in scripts)
-                    Console.WriteLine(s.Name);
-                Console.WriteLine("For more info type \"info <script name>\"");
-                string? command = Console.ReadLine();
-                if (string.IsNullOrWhiteSpace(command))
-                    continue;
-                string[] parts = command.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length == 2 && parts[0].Equals("info", StringComparison.OrdinalIgnoreCase)) {
-                    string scriptName = parts[1];
-                    Script? infoScript = scripts.Find(s => 
-                        s.Name.Equals(scriptName, StringComparison.OrdinalIgnoreCase)
-                    );
-                    if (infoScript != null)
-                        PrintScriptInfo(infoScript);
-                    else
-                        Console.WriteLine($"Error: No script named \"{scriptName}\".");
-                }
+            Console.WriteLine("\nWhat script to play with?\nAvailable Scripts:");
+            for (int i = 0; i < scripts.Count; i++)
+                Console.WriteLine($"\t{i + 1}: {scripts[i].Name}");
+            Console.Write("Enter number to select script or type \"info\" [number] for script details: ");
+            string? input = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(input)) {
+                Console.WriteLine("Please input a script number.");
                 continue;
-            } else if (inputScript != null && scripts.Exists(x => x.Name == inputScript)) {
-                selected = scripts.Find(s => s.Name == inputScript)!;
-                break;
             }
-            Console.WriteLine("Error: Script not available.");
+            var parts = input.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts[0].Equals("info", StringComparison.OrdinalIgnoreCase)) {
+                if (parts.Length < 2 || !int.TryParse(parts[1], out int infoIdx) || infoIdx < 1
+                || infoIdx > scripts.Count) {
+                    Console.WriteLine("Please provide a valid script number after 'info'.");
+                    continue;
+                }
+                PrintScriptInfo(scripts[infoIdx - 1]);
+                Console.Write("(Press Enter to continue selection)");
+                Console.ReadLine();
+                continue;
+            }
+            if (!int.TryParse(parts[0], out int idx) || idx < 1 || idx > scripts.Count) {
+                Console.WriteLine("Invalid selection.");
+                continue;
+            }
+            selected = scripts[idx - 1];
+            break;
         }
         Console.WriteLine($"Selected to play: {selected.Name} by {selected.Author}.");
         return selected;

@@ -48,7 +48,9 @@ public class Jinx(Character a, Character b, string desc)
     public string Description { get; set; } = desc;
 }
 
-public class BotcRoles {
+public class BotcTokens {
+    static readonly string characterData = "./Resources/characters.json";
+    static readonly string jinxData = "./Resources/jinxes.json";
 
     public static readonly Dictionary<string, Character> Characters;
 
@@ -71,11 +73,11 @@ public class BotcRoles {
 
     public static readonly List<Jinx> Jinxes;
 
-    static BotcRoles()
+    static BotcTokens()
     {
         Characters = [];
         Jinxes = [];
-        var json = File.ReadAllText("./Resources/characters.json");
+        var json = File.ReadAllText(characterData);
         using var doc = JsonDocument.Parse(json);
         foreach (var section in doc.RootElement.EnumerateObject()) {
             CharType type = section.Name switch {
@@ -106,6 +108,6 @@ public class BotcRoles {
                 };
             }
         }
-        Jinxes = LoadJinxes("./Resources/jinxes.json");
+        Jinxes = LoadJinxes(jinxData);
     }
 }

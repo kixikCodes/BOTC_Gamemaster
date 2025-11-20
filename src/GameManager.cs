@@ -7,6 +7,7 @@ public class Game {
     public Character? Loric;
     public List<Jinx> ActiveJinxes { get; set; } = [];
     public List<Character> Bluffs { get; set; } = [];
+    public Character? AmnesiacRole;
     public Character? DrunkFake;
     public Character? LunaticFake;
     public Character? MarionetteFake;
@@ -37,7 +38,8 @@ public class GameManager {
         List<Character> Bluffs,
         Character? DrunkFake,
         Character? LunaticFake,
-        Character? MarionetteFake
+        Character? MarionetteFake,
+        Character? AmnesiacRole
     );
 
     public static int SetPlayerCount() {
@@ -75,7 +77,7 @@ public class GameManager {
 
     private static Roles LegionGame(List<string> players, Script script, Character legion) {
         int playerCount = players.Count;
-        int legionCount = Math.Max(1, (int)Math.Round(playerCount * 0.75));
+        int legionCount = Math.Max(1, (int)Math.Round(playerCount * 0.66));
         int townsfolkCount = playerCount - legionCount;
         var selectedTownsfolk = script.Townsfolk
             .OrderBy(_ => rng.Next())
@@ -93,7 +95,8 @@ public class GameManager {
             Bluffs: bluffs,
             DrunkFake: null,
             LunaticFake: null,
-            MarionetteFake: null
+            MarionetteFake: null,
+            AmnesiacRole: null
         );
     }
 
@@ -123,6 +126,14 @@ public class GameManager {
             .OrderBy(_ => rng.Next())
             .Take(townsfolkCount)
         ];
+        // Select a true role for the Amnesiac if there is one.
+        Character? amnesiacRole = null;
+        if (selectedTownsfolk.Exists(c => c.Id == "amnesiac")) {
+            List<Character> remainingTownsfolk = [.. script.Townsfolk
+                .Except(selectedTownsfolk)
+            ];
+            amnesiacRole = PickRandom(remainingTownsfolk);
+        }
         // Select a fake role for the Drunk if there is one.
         Character? drunkFake = null;
         if (selectedOutsiders.Exists(c => c.Id == "drunk")) {
@@ -162,12 +173,12 @@ public class GameManager {
             Bluffs: [.. allPossible],
             DrunkFake: drunkFake,
             LunaticFake: lunaticFake,
-            MarionetteFake: marionetteFake
+            MarionetteFake: marionetteFake,
+            AmnesiacRole: amnesiacRole
         );
     }
 
-    private static Dictionary<string, Character> AssignRoles(List<string> players, List<Character> roles)
-    {
+    private static Dictionary<string, Character> AssignRoles(List<string> players, List<Character> roles) {
         Dictionary<string, Character> assignments = [];
         List<string> shuffledPlayers = [.. players.OrderBy(_ => rng.Next())];
         List<Character> shuffledRoles = [.. roles.OrderBy(_ => rng.Next())];
@@ -194,6 +205,32 @@ public class GameManager {
         return target;
     }
 
+    public static List<Character> SetTravellers(Game prepedGame, Script script) {
+        if (script.Travellers.Count == 0) {
+            Console.WriteLine("This script has no available Travellers.");
+            return [];
+        }
+        List<Character> chosen = [];
+        while (true) {
+            Console.WriteLine("\nAvailable Travellers:");
+            for (int i = 0; i < script.Travellers.Count; i++)
+                Console.WriteLine($"\t{i + 1}: {script.Travellers[i]}");
+            Console.Write("Enter number to add traveller (or press Enter to finish): ");
+            string? sel = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(sel))
+                break;
+            if (!int.TryParse(sel, out int idx) || idx < 1 || idx > script.Travellers.Count) {
+                Console.WriteLine("Invalid selection.");
+                continue;
+            }
+            chosen.Add(script.Travellers[idx - 1]);
+            Console.WriteLine("Traveller added.");
+            if (prepedGame.Travellers.Count == 0)
+                break;
+        }
+        return chosen;
+    }
+
     public static Game CreateGame(List<string> players, Script script) {
         Game game = new() {
             Fabled = script.Fabled,
@@ -202,6 +239,7 @@ public class GameManager {
         
         var selected = PickRoles(script, players);
         game.Assignments = AssignRoles(players, selected.PlayerRoles);
+        game.AmnesiacRole = selected.AmnesiacRole;
         game.DrunkFake = selected.DrunkFake;
         game.LunaticFake = selected.LunaticFake;
         game.MarionetteFake = selected.MarionetteFake;
@@ -210,7 +248,7 @@ public class GameManager {
         game.ActiveJinxes = [];
         if (script.Fabled != null && string.Equals(script.Fabled.Id, "djinn")) {
             var assigned = new HashSet<Character>(selected.PlayerRoles);
-            foreach (var jinx in BotcRoles.Jinxes)
+            foreach (var jinx in BotcTokens.Jinxes)
                 if (assigned.Contains(jinx.Pair.Item1) && assigned.Contains(jinx.Pair.Item2))
                     game.ActiveJinxes.Add(jinx);
         }
