@@ -26,7 +26,7 @@ packages/
 .DS_Store
 Thumbs.db
 
-# .sln file bcs idc
+# Solution file bcs idc
 *.sln
 
 # Test Scripts

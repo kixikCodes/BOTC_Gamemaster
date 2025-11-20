@@ -9,10 +9,16 @@ public class Game {
     public List<Character> Bluffs { get; set; } = [];
     public Character? DrunkFake;
     public Character? LunaticFake;
+    public Character? MarionetteFake;
+    public string GrandmotherTarget = "";
+    public string EvilTwinTarget = "";
+    public string BootleggerRule = "";
 }
 
 public class GameManager {
     static readonly Random rng = new();
+
+    static T PickRandom<T>(List<T> list) => list[rng.Next(list.Count)];
 
     static readonly Dictionary<int, (int Townsfolk, int Outsiders, int Minions, int Demons)>
     RoleCountTable = new() {
@@ -30,7 +36,8 @@ public class GameManager {
         List<Character> PlayerRoles,
         List<Character> Bluffs,
         Character? DrunkFake,
-        Character? LunaticFake
+        Character? LunaticFake,
+        Character? MarionetteFake
     );
 
     public static int SetPlayerCount() {
@@ -66,13 +73,38 @@ public class GameManager {
         return playerNames;
     }
 
+    private static Roles LegionGame(List<string> players, Script script, Character legion) {
+        int playerCount = players.Count;
+        int legionCount = Math.Max(1, (int)Math.Round(playerCount * 0.75));
+        int townsfolkCount = playerCount - legionCount;
+        var selectedTownsfolk = script.Townsfolk
+            .OrderBy(_ => rng.Next())
+            .Take(townsfolkCount)
+            .ToList();
+        List<Character> roles = [];
+        for (int i = 0; i < legionCount; i++)
+            roles.Add(legion);
+        roles.AddRange(selectedTownsfolk);
+        var bluffs = script.Townsfolk
+            .Where(t => !selectedTownsfolk.Contains(t))
+            .ToList();
+        return new Roles(
+            PlayerRoles: roles,
+            Bluffs: bluffs,
+            DrunkFake: null,
+            LunaticFake: null,
+            MarionetteFake: null
+        );
+    }
+
     private static Roles PickRoles(Script script, List<string> players) {
         var (townsfolkCount, outsiderCount, minionCount, demonCount) 
             = RoleCountTable[players.Count];
-        static Character PickRandom(List<Character> list) => list[rng.Next(list.Count)];
-
+        // Select demon, handle Legion if picked.
         Character demon = PickRandom(script.Demons);
-        
+        if (demon.Id == "legion")
+            return LegionGame(players, script, demon);
+        // Select minions, handle Baron manipulation.
         List<Character> selectedMinions = [.. script.Minions
             .OrderBy(_ => rng.Next())
             .Take(minionCount)
@@ -81,17 +113,17 @@ public class GameManager {
             outsiderCount++;
             townsfolkCount--;
         }
-
+        // Select outsiders.
         List<Character> selectedOutsiders = [.. script.Outsiders
             .OrderBy(_ => rng.Next())
             .Take(outsiderCount)
         ];
-
+        // Select townsfolk.
         List<Character> selectedTownsfolk = [.. script.Townsfolk
             .OrderBy(_ => rng.Next())
             .Take(townsfolkCount)
         ];
-
+        // Select a fake role for the Drunk if there is one.
         Character? drunkFake = null;
         if (selectedOutsiders.Exists(c => c.Id == "drunk")) {
             List<Character> remainingTownsfolk = [.. script.Townsfolk
@@ -99,14 +131,24 @@ public class GameManager {
             ];
             drunkFake = PickRandom(remainingTownsfolk);
         }
-
+        // Select a fake role for the Marionette if there is one.
+        Character? marionetteFake = null;
+        if (selectedMinions.Exists(c => c.Id == "marionette")) {
+            List<Character> remainingTownsfolk = [.. script.Townsfolk
+                .Except(selectedTownsfolk)
+            ];
+            marionetteFake = PickRandom(remainingTownsfolk);
+        }
+        // Select a fake demon for the Lunatic if there is one.
         Character? lunaticFake = null;
-
+        if (selectedOutsiders.Exists(c => c.Id == "lunatic"))
+            lunaticFake = PickRandom([.. script.Demons.Where(c => c.Id != demon.Id)]);
+        // Combine all selected roles.
         List<Character> roles = [demon];
         roles.AddRange(selectedMinions);
         roles.AddRange(selectedOutsiders);
         roles.AddRange(selectedTownsfolk);
-
+        // Compute bluffs for Evil team.
         List<Character> allGoodSelected = [.. selectedTownsfolk, .. selectedOutsiders];
         var allPossible = script.Townsfolk.Concat(script.Outsiders).ToHashSet();
         foreach (Character role in allGoodSelected)
@@ -119,7 +161,8 @@ public class GameManager {
             PlayerRoles: roles,
             Bluffs: [.. allPossible],
             DrunkFake: drunkFake,
-            LunaticFake: lunaticFake
+            LunaticFake: lunaticFake,
+            MarionetteFake: marionetteFake
         );
     }
 
@@ -134,9 +177,25 @@ public class GameManager {
         return assignments;
     }
 
+    private static string SetRoleTarget(Roles selected, Dictionary<string, Character> assignments, string id) {
+        string target = "";
+        if (selected.PlayerRoles.Exists(c => c.Id == id)) {
+            string relevantPlayer = assignments
+                .First(kv => kv.Value.Id == id)
+                .Key;
+            var validTargets = assignments
+                .Where(kv =>
+                    kv.Key != relevantPlayer &&
+                    (kv.Value.Type == CharType.TOWNSFOLK || kv.Value.Type == CharType.OUTSIDER))
+                .Select(kv => kv.Key)
+                .ToList();
+            target = PickRandom(validTargets);
+        }
+        return target;
+    }
+
     public static Game CreateGame(List<string> players, Script script) {
         Game game = new() {
-            Travellers = script.Travellers,
             Fabled = script.Fabled,
             Loric = script.Loric
         };
@@ -144,6 +203,10 @@ public class GameManager {
         var selected = PickRoles(script, players);
         game.Assignments = AssignRoles(players, selected.PlayerRoles);
         game.DrunkFake = selected.DrunkFake;
+        game.LunaticFake = selected.LunaticFake;
+        game.MarionetteFake = selected.MarionetteFake;
+        game.GrandmotherTarget = SetRoleTarget(selected, game.Assignments, "grandmother");
+        game.EvilTwinTarget = SetRoleTarget(selected, game.Assignments, "eviltwin");
         game.ActiveJinxes = [];
         if (script.Fabled != null && string.Equals(script.Fabled.Id, "djinn")) {
             var assigned = new HashSet<Character>(selected.PlayerRoles);
